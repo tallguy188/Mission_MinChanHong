@@ -18,7 +18,7 @@ public class App {
 
     ObjectMapper objectMapper = new ObjectMapper();
 
-    File jsonFile = new File("quotes.json");
+    File jsonFile = new File("data.json");
 
 
     App() {
@@ -49,9 +49,9 @@ public class App {
                 actionDelete(rq);
             } else if (cmd.startsWith("수정")) {
                 actionModify(rq);
+            } else if (cmd.equals("빌드")) {
+                buildJsonFile();
             }
-
-            saveQuotesToJson();
         }
     }
 
@@ -59,12 +59,14 @@ public class App {
 
         int newId = getNextId();
         System.out.print("명언 : ");
-        String comment = sc.nextLine();
+        String content = sc.nextLine();
         System.out.print("작가 : ");
         String author = sc.nextLine();
-        Quote quote = new Quote(newId, comment, author);
+        Quote quote = new Quote(newId, content, author);
         quotes.add(quote);
         System.out.println(quote.getId() + "번 명언이 등록되었습니다.");
+
+        saveQuotesToJson();
     }
 
     void actionList() {
@@ -72,7 +74,7 @@ public class App {
         System.out.println("----------------------");
         for (int i = quotes.size() - 1; i >= 0; i--) {
             Quote quote = quotes.get(i);
-            System.out.println(quote.getId() + " / " + quote.getAuthor() + " / " + quote.getComment());
+            System.out.println(quote.getId() + " / " + quote.getAuthor() + " / " + quote.getContent());
         }
 
     }
@@ -98,6 +100,7 @@ public class App {
         if (foundQuote != null) {
             quotes.remove(foundQuote);
             System.out.println(deleteId + "번 명언이 삭제되었습니다.");
+            saveQuotesToJson();
         } else {
             System.out.println(deleteId + "번 명언은 존재하지 않습니다.");
         }
@@ -117,17 +120,19 @@ public class App {
                 break;
             }
         }
-        String prevComment = quote.getComment();
+        String prevcontent = quote.getContent();
         String prevAuthor = quote.getAuthor();
 
-        System.out.println("명언(기존) : " + prevComment);
+        System.out.println("명언(기존) : " + prevcontent);
         System.out.print("명언 : ");
-        String modiComment = sc.nextLine();
+        String modicontent = sc.nextLine();
         System.out.println("작가(기존) : " + prevAuthor);
         System.out.print("작가 : ");
         String modiAuthor = sc.nextLine();
-        quote.setComment(modiComment);
+        quote.setContent(modicontent);
         quote.setAuthor(modiAuthor);
+
+        saveQuotesToJson();
     }
 
     void loadQuotesFromJson() {
@@ -170,6 +175,16 @@ public class App {
         }
     }
 
+
+    void buildJsonFile() {
+
+        try {
+            objectMapper.writeValue(jsonFile, quotes);
+            System.out.println("data.json 파일의 내용이 갱신되었습니다.");
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
 }
