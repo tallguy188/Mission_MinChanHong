@@ -1,26 +1,37 @@
 package com.ll;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 public class App {
 
     static ArrayList<Quote> quotes;
-    static int count;
+    static Set<Integer> availableIds;
     Scanner sc;
 
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    File jsonFile = new File("quotes.json");
 
 
     App() {
         quotes = new ArrayList<>();
-        count = 0;
         sc = new Scanner(System.in);
+        availableIds = new HashSet<>();
+        loadQuotesFromJson();
     }
 
     void run() {
 
         System.out.println("== 명언 앱 ==");
-        while(true) {
+        while (true) {
             System.out.print("명령) ");
 
             String cmd = sc.nextLine();
@@ -29,35 +40,31 @@ public class App {
 
             if (cmd.equals("종료")) {
                 break;
-            }
-            else if( cmd.equals("등록")) {
+            } else if (cmd.equals("등록")) {
 
                 actionWrite();
-            }
-            else if(cmd.equals("목록")) {
+            } else if (cmd.equals("목록")) {
                 actionList();
-            }
-
-            else if (cmd.startsWith("삭제")) {
+            } else if (cmd.startsWith("삭제")) {
                 actionDelete(rq);
-            }
-
-            else if (cmd.startsWith("수정")) {
+            } else if (cmd.startsWith("수정")) {
                 actionModify(rq);
             }
+
+            saveQuotesToJson();
         }
     }
 
     void actionWrite() {
 
-        count ++;
+        int newId = getNextId();
         System.out.print("명언 : ");
-        String comment  = sc.nextLine();
+        String comment = sc.nextLine();
         System.out.print("작가 : ");
         String author = sc.nextLine();
-        Quote quote = new Quote(count,comment,author);
+        Quote quote = new Quote(newId, comment, author);
         quotes.add(quote);
-        System.out.println(quote.getId()+"번 명언이 등록되었습니다.");
+        System.out.println(quote.getId() + "번 명언이 등록되었습니다.");
     }
 
     void actionList() {
@@ -70,41 +77,42 @@ public class App {
 
     }
 
-    void actionDelete(Rq rq){
+    void actionDelete(Rq rq) {
 
         boolean found = false;
 
-        int deleteId = rq.getParamAsInt("id",0);
+        int deleteId = rq.getParamAsInt("id", 0);
 
         if (deleteId == 0) {
             System.out.println("id를 정확하게 입력해주세요.");
             return;
         }
-        for (int i = 0; i< quotes.size(); i++) {
-            Quote quote = quotes.get(i);
-            if(quote.getId() == deleteId) {
-                quotes.remove(i);
-                System.out.println(deleteId + "번 명언이 삭제되었습니다.");
-                found = true;
+        Quote foundQuote = null;
+        for (Quote quote : quotes) {
+            if (quote.getId() == deleteId) {
+                foundQuote = quote;
                 break;
             }
         }
 
-        if (!found){
+        if (foundQuote != null) {
+            quotes.remove(foundQuote);
+            System.out.println(deleteId + "번 명언이 삭제되었습니다.");
+        } else {
             System.out.println(deleteId + "번 명언은 존재하지 않습니다.");
         }
     }
 
 
     void actionModify(Rq rq) {
-        int modifyId = rq.getParamAsInt("id",0);
-        if(modifyId == 0) {
+        int modifyId = rq.getParamAsInt("id", 0);
+        if (modifyId == 0) {
             System.out.println("id를 정확하게 입력해주세요.");
             return;
         }
         Quote quote = null;
-        for(Quote q : quotes) {
-            if(q.getId() == modifyId) {
+        for (Quote q : quotes) {
+            if (q.getId() == modifyId) {
                 quote = q;
                 break;
             }
@@ -120,8 +128,48 @@ public class App {
         String modiAuthor = sc.nextLine();
         quote.setComment(modiComment);
         quote.setAuthor(modiAuthor);
+    }
 
+    void loadQuotesFromJson() {
+        if (jsonFile.exists()) {
+            try {
+                quotes = objectMapper.readValue(jsonFile, new TypeReference<ArrayList<Quote>>() {
+                });
+
+                for(Quote quote : quotes) {
+                    availableIds.remove(quote.getId());
+                }
+            }catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
 
     }
+
+    void saveQuotesToJson() {
+        try {
+            objectMapper.writeValue(jsonFile,quotes);
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    int getNextId() {
+        if (!availableIds.isEmpty()) {
+            int smallestId = Integer.MAX_VALUE;
+            for (int id : availableIds) {
+                if (id < smallestId) {
+                    smallestId = id;
+                }
+            }
+            availableIds.remove(smallestId);
+            return smallestId;
+        } else {
+            return quotes.size() + 1;
+        }
+    }
+
+
 
 }
